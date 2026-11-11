@@ -88,9 +88,13 @@ void BME280::InitializeFilter()
 /****************************************************************/
 bool BME280::ReadChipID()
 {
-   uint8_t id[1];
+   uint8_t id[1] = { 0 };
 
-   ReadRegister(ID_ADDR, &id[0], 1);
+   if(!ReadRegister(ID_ADDR, &id[0], 1))
+   {
+      m_chip_model = ChipModel_UNKNOWN;
+      return false;
+   }
 
    switch(id[0])
    {
@@ -221,10 +225,13 @@ bool BME280::ReadData
    bool success;
    uint8_t buffer[SENSOR_DATA_LENGTH];
 
-   // For forced mode we need to write the mode to BME280 register before reading
+   // For forced mode we need to write the mode to BME280 register before reading,
+   // then wait for the measurement to finish, otherwise the previous (stale)
+   // measurement is read.
    if (m_settings.mode == Mode_Forced)
    {
       WriteSettings();
+      if(!WaitForMeasurement()) { return false; }
    }
 
    // Registers are in order. So we can start at the pressure register and read 8 bytes.
@@ -246,6 +253,35 @@ bool BME280::ReadData
 #endif
 
    return success;
+}
+
+
+/****************************************************************/
+bool BME280::WaitForMeasurement()
+{
+   // Maximum measurement time in microseconds, from the BME280 datasheet
+   // (section 9.1): 1.25 + 2.3*T_osr + (2.3*P_osr + 0.575) + (2.3*H_osr + 0.575) ms.
+   static const uint8_t osrSamples[] = { 0, 1, 2, 4, 8, 16 };
+   uint32_t tSamples = osrSamples[m_settings.tempOSR];
+   uint32_t pSamples = osrSamples[m_settings.presOSR];
+   uint32_t hSamples = osrSamples[m_settings.humOSR];
+
+   uint32_t maxTimeUs = 1250 + 2300 * tSamples;
+   if(pSamples) { maxTimeUs += 2300 * pSamples + 575; }
+   if(hSamples) { maxTimeUs += 2300 * hSamples + 575; }
+
+   delay((maxTimeUs + 999) / 1000);
+
+   // Then poll the "measuring" bit, in case the sensor is still busy.
+   uint8_t status = STATUS_MEASURING;
+   for(uint8_t i = 0; i < 10; ++i)
+   {
+      if(!ReadRegister(STATUS_ADDR, &status, 1)) { return false; }
+      if(!(status & STATUS_MEASURING)) { return true; }
+      delay(1);
+   }
+
+   return false;
 }
 
 
@@ -398,6 +434,8 @@ float BME280::pres
 /****************************************************************/
 float BME280::hum()
 {
+   if(m_chip_model != ChipModel_BME280){ return NAN; } // BMP280 has no humidity sensor.
+
    int32_t data[8];
    int32_t t_fine;
    if(!ReadData(data)){ return NAN; }
@@ -429,7 +467,7 @@ void BME280::read
    uint32_t rawHumidity = (data[6] << 8) | data[7];
    temp = CalculateTemperature(rawTemp, t_fine, tempUnit);
    pressure = CalculatePressure(rawPressure, t_fine, presUnit);
-   humidity = CalculateHumidity(rawHumidity, t_fine);
+   humidity = m_chip_model == ChipModel_BME280 ? CalculateHumidity(rawHumidity, t_fine) : NAN;
 }
 
 

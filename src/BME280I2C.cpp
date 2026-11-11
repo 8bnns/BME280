@@ -71,9 +71,8 @@ bool BME280I2C::WriteRegister
   Wire.beginTransmission(m_settings.bme280Addr);
   Wire.write(addr);
   Wire.write(data);
-  Wire.endTransmission();
 
-  return true; // TODO: Check return values from wire calls.
+  return Wire.endTransmission() == 0;
 }
 
 
@@ -89,11 +88,15 @@ bool BME280I2C::ReadRegister
 
   Wire.beginTransmission(m_settings.bme280Addr);
   Wire.write(addr);
-  Wire.endTransmission();
+  if(Wire.endTransmission() != 0)
+  {
+    return false;
+  }
 
   Wire.requestFrom(static_cast<uint8_t>(m_settings.bme280Addr), length);
 
-  while(Wire.available())
+  // Never write past the end of the caller's buffer.
+  while(Wire.available() && ord < length)
   {
     data[ord++] = Wire.read();
   }
