@@ -1,4 +1,5 @@
 #include "BME280.h"
+#include "EnvironmentCalculations.h"
 #include <Wire.h>
 #include <SPI.h>
 #include <assert.h>
@@ -29,5 +30,14 @@ int main(){
   assert(t>20 && t<30 && p>900 && p<1100 && h>0 && h<100);
   Fake b(0x58); assert(b.begin()); b.read(p,t,h); printf("BMP280: H=%f\n",h); assert(isnan(h)&&isnan(b.hum()));
   Fake u(0x11); assert(!u.begin());
+  // EnvironmentCalculations, expected values from the NWS / Magnus reference formulas.
+  using namespace EnvironmentCalculations;
+  #define NEAR(a,b,eps) (fabs((a)-(b)) < (eps))
+  assert(NEAR(HeatIndex(90.0, 60.0, TempUnit_Fahrenheit), 99.678, 0.01));
+  // Low-humidity adjustment: a non-integer |T-95| must not be truncated.
+  assert(NEAR(HeatIndex(95.5, 10.0, TempUnit_Fahrenheit), 89.904, 0.01));
+  assert(NEAR(DewPoint(25.0, 50.0), 13.858, 0.01));
+  assert(NEAR(Altitude(899.9), 1011.85, 0.5));
+  assert(isnan(DewPoint(NAN, 50.0)));
   puts("OK");
 }
