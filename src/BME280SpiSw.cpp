@@ -86,9 +86,9 @@ uint8_t BME280SpiSw::SpiTransferSw
    for (int bit = 7; bit >= 0; --bit) {
       resp <<= 1;
       digitalWrite(m_settings.spiSckPin, LOW);
-      digitalWrite(m_settings.spiMosiPin, data & (1 << bit));
+      digitalWrite(m_settings.spiMosiPin, (data & (1 << bit)) ? HIGH : LOW);
       digitalWrite(m_settings.spiSckPin, HIGH);
-      resp |= digitalRead(m_settings.spiMisoPin);
+      resp |= (digitalRead(m_settings.spiMisoPin) == HIGH) ? 1 : 0;
    }
    return resp;
 }

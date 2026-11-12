@@ -139,7 +139,7 @@ float EnvironmentCalculations::HeatIndex
       //third red block
       if ((humidity < 13) && (temperature >= 80.0) && (temperature <= 112.0))
       {
-        heatIndex -= ((13.0 - humidity) * 0.25) * sqrt((17.0 - abs(temperature - 95.0)) * 0.05882);
+        heatIndex -= ((13.0 - humidity) * 0.25) * sqrt((17.0 - fabs(temperature - 95.0)) * 0.05882);
       } //fourth red block
       else if ((humidity > 85.0) && (temperature >= 80.0) && (temperature <= 87.0))
       {

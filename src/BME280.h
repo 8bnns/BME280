@@ -241,6 +241,7 @@ private:
 
    static const uint8_t CTRL_HUM_ADDR   = 0xF2;
    static const uint8_t CTRL_MEAS_ADDR  = 0xF4;
+   static const uint8_t STATUS_ADDR     = 0xF3;
    static const uint8_t CONFIG_ADDR     = 0xF5;
    static const uint8_t PRESS_ADDR      = 0xF7;
    static const uint8_t TEMP_ADDR       = 0xFA;
@@ -253,6 +254,7 @@ private:
    static const uint8_t RESET_ADDR	= 0xE0;
 
    static const uint8_t RESET_VALUE	= 0xB6;
+   static const uint8_t STATUS_MEASURING = 0x08;
 
    static const uint8_t TEMP_DIG_LENGTH         = 6;
    static const uint8_t PRESS_DIG_LENGTH        = 18;
@@ -305,6 +307,12 @@ private:
    /////////////////////////////////////////////////////////////////
    /// Write the settings to the chip.
    void WriteSettings();
+
+
+   /////////////////////////////////////////////////////////////////
+   /// In forced mode, wait until the triggered measurement is done.
+   /// Return true if the measurement finished before the timeout.
+   bool WaitForMeasurement();
 
 
    /////////////////////////////////////////////////////////////////
